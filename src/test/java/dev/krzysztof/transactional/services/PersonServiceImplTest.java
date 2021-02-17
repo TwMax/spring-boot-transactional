@@ -2,6 +2,7 @@ package dev.krzysztof.transactional.services;
 
 import dev.krzysztof.transactional.domain.Person;
 import dev.krzysztof.transactional.domain.dto.PersonDto;
+import dev.krzysztof.transactional.exception.NotFoundException;
 import dev.krzysztof.transactional.repositories.PersonRepository;
 import dev.krzysztof.transactional.services.impl.PersonServiceImpl;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,8 +16,7 @@ import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.*;
 
-import static org.junit.jupiter.api.Assertions.assertAll;
-import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
@@ -145,5 +145,35 @@ class PersonServiceImplTest {
                 () -> assertEquals(personDtoRepo.getAge(), personDtoResponse.getAge()),
                 () -> verify(personRepository, never()).save(any())
         );
+    }
+
+    @Test
+    void shouldReturnUpdatePersonException() {
+        //given
+        Map<String, Object> mapPersonDto = new HashMap<>();
+        mapPersonDto.put("firstName", "Krzysztof");
+        mapPersonDto.put("lastName", "Gawłowski");
+        PersonDto personDtoRepo = new PersonDto("Adam", "Nowak", 12);
+
+        //when
+        when(personRepository.findById(2L)).thenReturn(Optional.empty());
+        PersonServiceImpl personServiceImpl = new PersonServiceImpl(personRepository, modelMapper, applicationEventPublisher);
+        assertThrows(NotFoundException.class, () -> personServiceImpl.update(mapPersonDto, 2L));
+    }
+
+    @Test
+    void shouldReturnUpdateParialPersonException() {
+        //given
+        Map<String, Object> mapPersonDto = new HashMap<>();
+        mapPersonDto.put("firstName", "Krzysztof");
+        mapPersonDto.put("X", "Gawłowski");
+        PersonDto personDtoRepo = new PersonDto("Adam", "Nowak", 12);
+
+        Person person = Optional.of(modelMapper.map(personDtoRepo, Person.class)).get();
+
+        //when
+        when(personRepository.findById(1L)).thenReturn(Optional.of(person));
+        PersonServiceImpl personServiceImpl = new PersonServiceImpl(personRepository, modelMapper, applicationEventPublisher);
+        assertThrows(IllegalStateException.class, () -> personServiceImpl.update(mapPersonDto, 1L));
     }
 }
